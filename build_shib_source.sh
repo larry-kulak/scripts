@@ -2,6 +2,10 @@
 
 # get epel release in case its missing
 
+
+osarch=$(uname -i)
+
+
 function get_epel () {
 
 if [ ! -f /etc/yum.repos.d/epel.repo ]
@@ -17,9 +21,11 @@ fi
 
 function get_shib () {
 
+yum install -y -q wget
+ 
 if [ ! -f /etc/yum.repos.d/shibboleth.repo ]
  then
-  wget http://download.opensuse.org/repositories/security://shibboleth/RHEL_6/security:shibboleth.repo -O /etc/yum.repos.d/shibboleth.repo
+  wget http://download.opensuse.org/repositories/security://shibboleth/${repo_path}/security:shibboleth.repo -O /etc/yum.repos.d/shibboleth.repo
  else
   echo "Shib repo already installed"
 fi
@@ -46,17 +52,17 @@ function compile_shib_rpm () {
 # test if file is already there
 # get os version for epel
 
-if [ ! -f /root/rpmbuild/RPMS/x86_64/shibboleth-2.5.6-3.1.el${rr}.x86_64.rpm ]
+if [ ! -f /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.el${rr}.${osarch}.rpm ]
   then
   mkdir /tmp/shib
   cd /tmp/shib
   yumdownloader --source shibboleth
   rpmbuild --rebuild shibboleth*.src.rpm --with fastcgi --without builtinapache
   if [[ ${release[0]} =~ ^CentOS ]]
-    then 
-    yum install -y /root/rpmbuild/RPMS/x86_64/shibboleth-2.5.6-3.1.el${rr}.centos.x86_64.rpm
+   then 
+    yum install -y /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.${osarch}.rpm
     else
-    yum install -y /root/rpmbuild/RPMS/x86_64/shibboleth-2.5.6-3.1.el${rr}.x86_64.rpm
+    yum install -y /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.el${rr}.${osarch}.rpm
   fi
   else
     echo "rpm already exists... please remove it and /tmp/shib directory"
@@ -76,7 +82,29 @@ echo "${release[-2]}"
 if [[ ${release[-2]} =~ ^7 ]]
   then 
     rr=7
+  else 
+    rr=6
 fi
+
+if [[ ${release[0]} =~ ^CentOS ]]
+  then
+  os="CentOS"
+  if [[ ${rr} -eq 6 ]]
+    then
+      repo_path="CentOS_CentOS-${rr}"
+      # echo "$repo_path"
+  elif [[ ${rr} -eq 7 ]]
+    then
+      repo_path="${os}_${rr}"
+  fi   
+elif [[ ${release[0]} =~ ^Red ]]
+  then
+  os="RHEL"
+  # since there is no shib for version 7 for rhel lets use 6
+  repo_path="${os}_6"
+fi
+
+echo ${repo_path}
 
 }
 
@@ -89,7 +117,7 @@ function start_enable_shibd () {
     systemctl start shibd
   else
     chkconfig shibd on
-    chkconfig shibd start
+    service shibd start
   fi
 
 }
@@ -97,10 +125,10 @@ function start_enable_shibd () {
 
 function orchestrate () {
 
-get_epel
-get_shib
-install_pkgs
 find_redhat_release
+get_shib
+get_epel
+install_pkgs
 compile_shib_rpm
 start_enable_shibd
 
@@ -111,19 +139,4 @@ orchestrate
 
 unset mypkgs
 unset redhat_release
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+unset repo_path
