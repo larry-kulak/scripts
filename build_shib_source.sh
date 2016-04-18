@@ -58,12 +58,12 @@ if [ ! -f /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.el${rr}.${osarch}.r
   cd /tmp/shib
   yumdownloader --source shibboleth
   rpmbuild --rebuild shibboleth*.src.rpm --with fastcgi --without builtinapache
-  if [[ ${release[0]} =~ ^CentOS ]]
-   then 
+  #if [[ ${release[0]} =~ ^CentOS ]]
+  # then 
     yum install -y /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.${osarch}.rpm
-    else
-    yum install -y /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.el${rr}.${osarch}.rpm
-  fi
+  #  else
+  #  yum install -y /root/rpmbuild/RPMS/${osarch}/shibboleth-2.5.6-3.1.el${rr}.${osarch}.rpm
+  #fi
   else
     echo "rpm already exists... please remove it and /tmp/shib directory"
 fi  
@@ -100,8 +100,14 @@ if [[ ${release[0]} =~ ^CentOS ]]
 elif [[ ${release[0]} =~ ^Red ]]
   then
   os="RHEL"
-  # since there is no shib for version 7 for rhel lets use 6
-  repo_path="${os}_6"
+  # since there is no shib for version 7 as per isntructions we need to use CentOS7
+  if [[ ${rr } -eq 7 ]]
+    then
+      repo_path="CentOS_${rr}"
+   elif [[ ${rr} -eq 6 ]]
+     then
+      repo_path="${os}_${rr}"
+   fi
 fi
 
 echo ${repo_path}
